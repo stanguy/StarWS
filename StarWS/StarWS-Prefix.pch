@@ -1,0 +1,8 @@
+//
+// Prefix header for all source files of the 'StarWS' target in the 'StarWS' project
+//
+
+#ifdef __OBJC__
+    #import <Foundation/Foundation.h>
+    #import <CoreData/CoreData.h>
+#endif
