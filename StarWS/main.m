@@ -6,6 +6,11 @@
 //  Copyright (c) 2013 Sebastien Tanguy. All rights reserved.
 //
 
+#import "Stop.h"
+#import "Line.h"
+
+#import "KeolisRennesAPI.h"
+
 static NSManagedObjectModel *managedObjectModel()
 {
     static NSManagedObjectModel *model = nil;
@@ -13,9 +18,9 @@ static NSManagedObjectModel *managedObjectModel()
         return model;
     }
     
-    NSString *path = @"StarWS";
-    path = [path stringByDeletingPathExtension];
-    NSURL *modelURL = [NSURL fileURLWithPath:[path stringByAppendingPathExtension:@"momd"]];
+    NSString *path = [[[NSProcessInfo processInfo] arguments] objectAtIndex:0];
+    path = [path stringByDeletingLastPathComponent];
+    NSURL *modelURL = [NSURL fileURLWithPath:[path stringByAppendingPathComponent:@"Transit.mom"]];
     model = [[NSManagedObjectModel alloc] initWithContentsOfURL:modelURL];
     
     return model;
@@ -36,9 +41,10 @@ static NSManagedObjectContext *managedObjectContext()
         
         NSString *STORE_TYPE = NSSQLiteStoreType;
         
-        NSString *path = [[NSProcessInfo processInfo] arguments][0];
-        path = [path stringByDeletingPathExtension];
-        NSURL *url = [NSURL fileURLWithPath:[path stringByAppendingPathExtension:@"sqlite"]];
+        NSString *path = [[[NSProcessInfo processInfo] arguments] objectAtIndex:0];
+        path = [path stringByDeletingLastPathComponent];
+        path = [path stringByAppendingPathComponent:@"Transit.sqlite"];
+        NSURL *url = [NSURL fileURLWithPath:path];
         
         NSError *error;
         NSPersistentStore *newStore = [coordinator addPersistentStoreWithType:STORE_TYPE configuration:nil URL:url options:nil error:&error];
@@ -58,6 +64,43 @@ int main(int argc, const char * argv[])
         NSManagedObjectContext *context = managedObjectContext();
         
         // Custom code here...
+        
+        Line* line = nil;
+        Stop* stop = nil;
+        
+        int ch;
+        while ( (ch = getopt( argc, argv, "l:s:" )) != -1 ) {
+            NSLog( @"yargla" );
+            switch ( ch ) {
+                case 'l':
+                    // find line
+                    line = [Line findByShortName:[NSString stringWithCString:optarg encoding:NSUTF8StringEncoding] inContext:context];
+                    break;
+                case 's':
+                    // find stop
+                    stop = [Stop findById:[NSString stringWithCString:optarg encoding:NSUTF8StringEncoding] inContext:context];
+                    break;
+                default:
+                    break;
+            }
+        }
+        
+        if ( nil == stop ) {
+            NSLog( @"We need at least one stop" );
+            exit(1);
+        }
+        
+        NSLog( @"calling with line %@ and stop %@", line, stop );
+        KeolisRennesAPI* api = [[KeolisRennesAPI alloc] init];
+        const char* key = getenv( "KEOLIS_API_KEY" );
+        if ( NULL == key ){
+            NSLog( @"You need the KEOLIS_API_KEY environment variable" );
+            exit( 1 );
+        }
+        api.key = [NSString stringWithCString:key encoding:NSUTF8StringEncoding];
+        [api findNextDepartureAtStop:stop];
+        
+        
         // Save the managed object context
         NSError *error = nil;
         if (![context save:&error]) {
