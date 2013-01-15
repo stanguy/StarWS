@@ -57,7 +57,7 @@
     
     NSMutableArray* stoptimes = [NSMutableArray array];
     NSArray* stoplines_a;
-
+    
     const int nbStopsPerCall = 5;
     while ( [stops count] > 0 ) {
         NSRange range;
@@ -66,42 +66,42 @@
         NSArray* current_stops = [stops subarrayWithRange:range];
         [stops removeObjectsInRange:range];
         
-    [params setObject:current_stops forKey:@"stop"];
-    id answer = [self callRemoteMethod:@"getbusnextdepartures" with:params];
-    id data = [[[answer objectForKey:@"opendata"] objectForKey:@"answer"] objectForKey:@"data"];
-    NSString* remote_time = [[data objectForKey:@"@attributes"] objectForKey:@"localdatetime"];
-    NSLog( @"%@", remote_time );
-
-    id stoplines = [data objectForKey:@"stopline"];
+        [params setObject:current_stops forKey:@"stop"];
+        id answer = [self callRemoteMethod:@"getbusnextdepartures" with:params];
+        id data = [[[answer objectForKey:@"opendata"] objectForKey:@"answer"] objectForKey:@"data"];
+        NSString* remote_time = [[data objectForKey:@"@attributes"] objectForKey:@"localdatetime"];
+        NSLog( @"%@", remote_time );
+        
+        id stoplines = [data objectForKey:@"stopline"];
         if ( nil != stoplines ) {
-    if( [stoplines isKindOfClass:[NSArray class]]) {
-        stoplines_a = stoplines;
-    } else {
-        stoplines_a = [NSArray arrayWithObject:stoplines];
-    }
-    for ( id stopline in stoplines_a) {
-        NSLog( @"%@", [stopline objectForKey:@"stop"] );
-        Line* line = [Line findBySrcId:[stopline objectForKey:@"route"] inContext:stop.managedObjectContext];
-        if ( nil == line ) {
-            NSLog( @"Unable to find route %@", [stopline objectForKey:@"route"]);
-        }
-        id departures = [[stopline objectForKey:@"departures"] objectForKey:@"departure"];
-        NSArray* departures_a;
-        if ( [departures isKindOfClass:[NSArray class]]) {
-            departures_a = departures;
-        } else {
-            departures_a = [NSArray arrayWithObject:departures];
-        }
-        for ( id departure in departures_a ) {
-            APIStopTime* stoptime = [[APIStopTime alloc] init];
-            stoptime.direction = [[departure objectForKey:@"@attributes"] objectForKey:@"headsign"];
-            stoptime.accurate = 1 == [[[departure objectForKey:@"@attributes"] objectForKey:@"accurate"] integerValue];
-            stoptime.stop = stop;
-            stoptime.line = line;
-            stoptime.date = [frm dateFromString:[departure objectForKey:@"content"]];
-            [stoptimes addObject:stoptime];
-        }
-    }
+            if( [stoplines isKindOfClass:[NSArray class]]) {
+                stoplines_a = stoplines;
+            } else {
+                stoplines_a = [NSArray arrayWithObject:stoplines];
+            }
+            for ( id stopline in stoplines_a) {
+                NSLog( @"%@", [stopline objectForKey:@"stop"] );
+                Line* line = [Line findBySrcId:[stopline objectForKey:@"route"] inContext:stop.managedObjectContext];
+                if ( nil == line ) {
+                    NSLog( @"Unable to find route %@", [stopline objectForKey:@"route"]);
+                }
+                id departures = [[stopline objectForKey:@"departures"] objectForKey:@"departure"];
+                NSArray* departures_a;
+                if ( [departures isKindOfClass:[NSArray class]]) {
+                    departures_a = departures;
+                } else {
+                    departures_a = [NSArray arrayWithObject:departures];
+                }
+                for ( id departure in departures_a ) {
+                    APIStopTime* stoptime = [[APIStopTime alloc] init];
+                    stoptime.direction = [[departure objectForKey:@"@attributes"] objectForKey:@"headsign"];
+                    stoptime.accurate = 1 == [[[departure objectForKey:@"@attributes"] objectForKey:@"accurate"] integerValue];
+                    stoptime.stop = stop;
+                    stoptime.line = line;
+                    stoptime.date = [frm dateFromString:[departure objectForKey:@"content"]];
+                    [stoptimes addObject:stoptime];
+                }
+            }
         }
         NSLog( @"stoptimes currently: %lu", [stoptimes count] );
     }
